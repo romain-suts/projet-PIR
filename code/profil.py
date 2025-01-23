@@ -2,6 +2,14 @@ import math
 from math import *
 import numpy as np
 import matplotlib.pyplot as plt
+def calc_g(r,rayon_noyau,G):
+    masse_vol_glace = 917
+    masse_vol_silicate = 3000
+    if (r<rayon_noyau):
+        masse= (4*pi/3)*np.power(r,3)*masse_vol_silicate
+    else:
+        masse= (4*pi/3)*np.power(rayon_noyau,3)*masse_vol_silicate + (4*pi/3)*(np.power(r,3)-np.power(rayon_noyau,3))*masse_vol_glace
+    return (G*masse/np.power(r,2))
 
 def affichage(tour,g,pression,rayon):
     x = np.linspace(rayon,0,tour) 
@@ -38,14 +46,32 @@ fichier = open("data.txt", "a")
 while (rayon>rayon_noyau):#1ere couche
     tour +=1
     rayon-=pas
-    g.append(g[-1]-pas*(4*pi*G*masse_vol_glace-2*g[-1]/rayon))
+    g.append(calc_g(rayon,rayon_noyau,G))
     pression.append(pression[-1]+pas*g[-1]*masse_vol_glace)
-    fichier.write("{}\t{}\t{}\n".format(rayon,pression[-1],g[-1]))
+    if (tour%10==0):
+        fichier.write("{}\t{}\t{}\n".format(rayon,pression[-1],g[-1]))
 while (rayon>=pas):#2eme couche
     tour +=1
     rayon=rayon-pas
-    g.append(g[-1]-pas*(4*pi*G*masse_vol_silicate-2*g[-1]/rayon))
+    g.append(calc_g(rayon,rayon_noyau,G))
     pression.append(pression[-1]+pas*g[-1]*masse_vol_silicate)
-    fichier.write("{}\t{}\t{}\n".format(rayon,pression[-1],g[-1]))
+    if (tour%10==0):
+        fichier.write("{}\t{}\t{}\n".format(rayon,pression[-1],g[-1]))
+
+# while (rayon>rayon_noyau):#1ere couche
+#     tour +=1
+#     rayon-=pas
+#     g.append(g[-1]-pas*(4*pi*G*masse_vol_glace-2*g[-1]/rayon))
+    
+#     pression.append(pression[-1]+pas*g[-1]*masse_vol_glace)
+#     if (tour%10==0):
+#         fichier.write("{}\t{}\t{}\n".format(rayon,pression[-1],g[-1]))
+# while (rayon>=pas):#2eme couche
+#     tour +=1
+#     rayon=rayon-pas
+#     g.append(g[-1]-pas*(4*pi*G*masse_vol_silicate-2*g[-1]/rayon))
+#     pression.append(pression[-1]+pas*g[-1]*masse_vol_silicate)
+#     if (tour%10==0):
+#         fichier.write("{}\t{}\t{}\n".format(rayon,pression[-1],g[-1]))
 affichage(tour,g,pression,rayon_lune)
 fichier.close()
