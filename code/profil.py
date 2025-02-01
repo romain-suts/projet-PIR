@@ -109,13 +109,14 @@ rayon_noyau,densite_lune = calc_forme_init(masse_lune,rayon_lune)
 nb_iteration_max = 1
 while ((tour_global==0 or abs(masse_lune-masse)>1E6)and(tour_global<nb_iteration_max)):
     tour_global += 1
-    g = [G*masse_lune/np.power(rayon_lune,2)]
-    pression = [pression_surface]
-    T = [temperature_surface]
-    chaleur = [chaleur_surface]
     masse = 0
     rayon = rayon_lune
     tour = 0
+    g = [calc_g(rayon,rayon_noyau,G,pas)]
+    pression = [pression_surface]
+    T = [temperature_surface]
+    chaleur = [chaleur_surface]
+
     while (rayon>2*pas):
         tour += 1
         rayon -= pas
