@@ -10,6 +10,7 @@ from math import *
 import numpy as np
 import matplotlib.pyplot as plt
 
+plt.close('all')
 
 # CONSTANTES
 densite_glace = 917  # kg/m^3
@@ -142,7 +143,7 @@ plt.grid()
 
 #%%
 
-# # PROFIL DE PRESSION dP/dr
+# PROFIL DE PRESSION dP/dr
 def dPdr(r, P):
     densite_r = distr_densite[int(r / (rayon / len(distr_densite)))]  # Extraction de la densité pour le rayon r
     g_r = g[int(r / (rayon / len(g)))]  # Extraction de la gravité pour le rayon r
@@ -163,3 +164,42 @@ plt.ylabel("Pression (Pa)")
 plt.title("Profil de la pression dans Ganymède")
 plt.grid()
 plt.show()
+
+#%%
+
+# CALCUL DU MOMENT D'INERTIE
+
+def dIdr(r):
+    def densite(r):
+        if r <= rayon_silicate:
+            return densite_silicate
+        else:
+            return densite_glace
+    rho = densite(r)
+    return 8/3*np.pi*r**4*rho
+
+I = np.zeros(len(distr_rayon))
+
+for i in range (len(distr_rayon)):
+    I[i] = I[i-1] + distr_rayon[1]*dIdr(distr_rayon[i])
+
+alpha = I[len(I)-1]/(masse*rayon**2)
+
+plt.figure(5)
+plt.plot(distr_rayon, I)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
