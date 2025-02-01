@@ -31,18 +31,20 @@ def calc_P(p,g,pas):
     return (p+pas*g*densite(rayon,rayon_noyau))
 
 def calc_Q(q,r,rayon_noyau,pas):
-    if (r>rayon_noyau):
-        return (q-pas*(-1*np.power(rayon_noyau/r,3))*densite(rayon_noyau,rayon_noyau)*S(rayon_noyau,rayon_noyau))
-    else:
-        return (q-densite(r,rayon_noyau)*S(r,rayon_noyau)/3)
+    q += pas*(densite(r,rayon_noyau)*S(r,rayon_noyau) - 2*q/r)
+    return q
 
-def calc_T(T,r,Q,rayon_noyau):
-    T+=pas*(Q/lambda_(r,rayon_noyau))
+def calc_T(T,r,q,rayon_noyau):
+    T += pas*(q/lambda_(r,rayon_noyau))
     return (T)
 
-def calc_I(rayon,rayon_noyau):
-    densite_lune = (densite(rayon_noyau,rayon_noyau)-densite(rayon,rayon_noyau))*np.power(rayon_noyau/rayon,3)+densite(rayon,rayon_noyau)
-    I = (2/5)*(((densite(0,rayon_noyau)-densite(rayon,rayon_noyau))*np.power(rayon_noyau/rayon,5)/densite_lune)+densite(rayon,rayon_noyau)/densite_lune)
+def calc_I(rayon_lune,rayon_noyau,masse_lune,pas):
+    r=0
+    I=0
+    while (r<=rayon_lune):
+        r+=pas
+        I+=8/3*pi*r**4*densite(r,rayon_noyau)
+    I=I/(np.power(rayon,2)*masse_lune)
     return I
 
 def calc_g(rayon,rayon_noyau,G,pas):
@@ -115,30 +117,14 @@ while ((tour_global==0 or abs(masse_lune-masse)>1E6)and(tour_global<nb_iteration
     rayon = rayon_lune
     tour = 0
     while (rayon>2*pas):
-        tour +=1
-        rayon-=pas
+        tour += 1
+        rayon -= pas
         g.append(calc_g(rayon,rayon_noyau,G,pas))
         pression.append(calc_P(pression[-1],g[-1],pas))
         chaleur.append(calc_Q(chaleur[-1],rayon,rayon_noyau,pas))
         T.append(calc_T(T[-1],rayon,chaleur[-1],rayon_noyau))
         masse += calc_masse(masse,rayon,rayon_noyau,pas)
-    print("I = {}".format(calc_I(rayon_lune,rayon_noyau)))
+    print("I = {}".format(calc_I(rayon_lune,rayon_noyau,masse_lune,pas)))
     #rayon_noyau = calc_forme(masse,masse_lune,rayon_noyau) marche pas encore
 
 affichage(tour,g,pression,chaleur,T,rayon_lune)
-
-# while (rayon>rayon_noyau):#1ere couche
-#     tour +=1
-#     rayon-=pas
-#     g.append(g[-1]-pas*(4*pi*G*masse_vol_glace-2*g[-1]/rayon))
-    
-#     pression.append(pression[-1]+pas*g[-1]*masse_vol_glace)
-#     if (tour%10==0):
-#         fichier.write("{}\t{}\t{}\n".format(rayon,pression[-1],g[-1]))
-# while (rayon>=pas):#2eme couche
-#     tour +=1
-#     rayon=rayon-pas
-#     g.append(g[-1]-pas*(4*pi*G*masse_vol_silicate-2*g[-1]/rayon))
-#     pression.append(pression[-1]+pas*g[-1]*masse_vol_silicate)
-#     if (tour%10==0):
-#         fichier.write("{}\t{}\t{}\n".format(rayon,pression[-1],g[-1]))
