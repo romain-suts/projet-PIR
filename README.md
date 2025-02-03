@@ -21,3 +21,4 @@ Objectif n°6 : Tracer le diagramme de phase de l'eau ??
 
 ## Sources
 https://www.researchgate.net/figure/a-Structure-interne-de-Ganymede-b-Profil-de-la-temperature-dans-lhydrosphere-de_fig1_298790311
+Cours de Marie CALVET et Marc MONNEREAU sur le champ de gravité. 
