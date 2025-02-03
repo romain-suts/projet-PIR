@@ -14,4 +14,6 @@ Objectif n°3 : Coder la résolution du moment d'inertie.
 
 Objectif n°4 : Passer à un modèle 3,4,5 couches couplés au calcul du moment d'inertie.
 
-Objectif n°5 Inclure des mouvements de convection dans les phases liquides
+Objectif n°5 : Inclure des mouvements de convection dans les phases liquides.
+
+Objectif n°6 : Tracer le diagramme de phase de l'eau ??
