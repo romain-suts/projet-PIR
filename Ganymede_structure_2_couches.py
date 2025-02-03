@@ -76,13 +76,13 @@ def euler_method(f, y0, t0, t_end, h):
 #%%
 
 # PROFIL DE MASSE
-distr_rayon = np.linspace(0, rayon, 1000)
+distr_rayon = np.linspace(0, rayon, 5000)
 
 def dmdr(r, m):
     return 4 * np.pi * densite(r) * r**2
 
-distr_masse = euler_method(lambda r, m: dmdr(r, m), 0, 0, rayon, rayon / 1000)[1]
-distr_masse = distr_masse[:1000] # la résolution ajout 1 élement en trop dans ce tableau
+distr_masse = euler_method(lambda r, m: dmdr(r, m), 0, 0, rayon, rayon / 5000)[1]
+distr_masse = distr_masse[:5000] # la résolution ajout 1 élement en trop dans ce tableau
 
 plt.figure(1)
 plt.plot(distr_rayon*10**(-3), distr_masse, label="Distribution de masse")
@@ -94,7 +94,7 @@ plt.grid()
 #%% 
 
 # PROFIL DE DENSITE
-distr_densite = np.zeros(1000)
+distr_densite = np.zeros(5000)
 for i in range(len(distr_rayon)):
     distr_densite[i] = densite(distr_rayon[i])
     
@@ -109,20 +109,20 @@ plt.grid()
 
 # PROFIL DE g 
 def calcul_gravite_analytique():
-    g_analytique = np.zeros(1000)
-    for i in range(1000):
+    g_analytique = np.zeros(5000)
+    for i in range(5000):
         g_analytique[i] = G*distr_masse[i]/distr_rayon[i]**2
     return g_analytique
 
 g_analytique = calcul_gravite_analytique()
 
 # CALCUL DE g(r) AVEC MÉTHODE D'EULER
-g = np.zeros(1000)
+g = np.zeros(5000)
 for i in range(1, len(distr_rayon)):
     r = distr_rayon[i]
     m = distr_masse[i]
     densite = distr_densite[i-1]
-    h = rayon/1000
+    h = rayon/5000
     g_i = g[i - 1]
     
     # Calcul de dg/dr à l'étape i
@@ -153,8 +153,8 @@ def dPdr(r, P):
 P0 = 7.57e9  #Pa
 
 # Exemple d'utilisation de la méthode d'Euler
-distr_pression = euler_method(lambda r, P: dPdr(r, P), P0, 0, rayon, rayon / 1000)[1]
-distr_pression = distr_pression[1:]
+distr_pression = euler_method(lambda r, P: dPdr(r, P), P0, 0, rayon, rayon / 5000)[1]
+distr_pression = distr_pression[2:]
 
 
 plt.figure(4)
@@ -187,19 +187,55 @@ alpha = I[len(I)-1]/(masse*rayon**2)
 
 plt.figure(5)
 plt.plot(distr_rayon, I)
+plt.xlabel('Rayon (km)')
+plt.ylabel("Moment d'inertie (kg.m²)")
+plt.title("Profil du moment d'inertie dans Ganymède")
+plt.grid()
+plt.show()
 
+#%%
 
+# CALCUL DU FLUX DE TEMPERATURE
+prod_energie = 2 * 10**(-12) #W/kg
+k_silicate = 0.22 #W/m²/kg
+k_glace = 2.1 #W/m²/kg
 
+# CALCUL DE q(r) AVEC MÉTHODE D'EULER
+q = np.zeros(5000)
+for i in range(1, len(distr_rayon)):
+    r = distr_rayon[i]
+    densite = distr_densite[i-1]
+    h = rayon/5000
+    q_i = q[i - 1]
+    
+    # Calcul de dg/dr à l'étape i
+    dqdr = densite * prod_energie - 2 * q_i / r
+    
+    # Mise à jour de g(r) en utilisant la méthode d'Euler
+    q[i] = q[i - 1] + h * dqdr
+    
+# CALCUL DE LA TEMPERATURE
 
+def dTdr(q, k):
+    return - q / k 
 
+distr_temp = np.zeros(5000)
 
+for i in range (len(distr_rayon)):
+    if distr_rayon[i] < rayon_silicate :
+        distr_temp[i] = distr_temp[i - 1] + h * dTdr(q[i], k_silicate) 
 
+    else:
+        distr_temp[i] = distr_temp[i - 1] + h * dTdr(q[i], k_glace) 
 
+for i in range(len(distr_temp)):
+    distr_temp[i] = distr_temp[i] - distr_temp[4999] + 110
 
-
-
-
-
-
-
+plt.figure(6)
+plt.plot(distr_rayon*10**(-3),distr_temp)
+plt.xlabel('Rayon (km)')
+plt.ylabel("Température (K)")
+plt.title('Profil de température dans Ganymède')
+plt.grid()
+plt.show()
 
