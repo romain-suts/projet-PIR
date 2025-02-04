@@ -86,15 +86,9 @@ def calc_forme_init(masse,rayon):
 def calc_g(rayon,rayon_noyau,G,etat,pas):
     r=0
     masse=0
-    tour=0
-    l = len(etat)
-    while (r<=rayon-pas*l):
-        masse += pas*4*pi*np.power(r,2)*densite(r,rayon_noyau,0)
+    while (r<=rayon):
+        masse += pas*4*pi*np.power(r,2)*densite(r,rayon_noyau,etat)
         r += pas
-    while (tour!=l):
-        masse += pas*4*pi*np.power(r,2)*densite(r,rayon_noyau,etat[-1-tour])
-        r += pas
-        tour+=1
     return (G*masse/np.power(rayon,2))
 
 def etat_l(P,T):
@@ -112,14 +106,14 @@ moment_inertie = 0.3115
 pression_surface = 0. 
 temperature_surface = 110.
 chaleur_surface = 0.002
-pas = 1000.
+pas = 200.
 G = 6.6743E-11
 g_lune = masse_lune*G/np.power(rayon_lune,2)
 print(g_lune)
 tour_global = 0
 masse = 0.
 rayon_noyau,densite_lune = calc_forme_init(masse_lune,rayon_lune)
-nb_iteration_max = 50
+nb_iteration_max = 40
 
 while (tour_global<nb_iteration_max):
     tour_global += 1
@@ -134,12 +128,14 @@ while (tour_global<nb_iteration_max):
     I = [0]
     calibration = 0
     
-    while (rayon>0.1*rayon_lune):#probleme de g a regler
+    while (rayon>2*pas):#probleme de g a regler
         tour += 1
         rayon -= pas
         masse += pas*4*pi*np.power(rayon,2)*densite(rayon,rayon_noyau,etat[-1])
-        if ((masse_lune-masse)>0):
+        if ((masse_lune-masse)>0 and rayon>=0.1*rayon_lune):
             g.append((masse_lune-masse)*G/(rayon**2))
+        elif(rayon<0.2*rayon_lune):
+            g.append(calc_g(rayon,rayon_noyau,G,0,pas))
         else:
             g.append(0)
         pression.append(pression[-1]+pas*g[-1]*densite(rayon,rayon_noyau,etat[-1]))
@@ -161,7 +157,7 @@ while (tour_global<nb_iteration_max):
         I[i] -= I[-1] #redressement moment d'inertie 
         
     masse_excedentaire = masse-masse_lune
-    calibration = ((rayon_noyau**3)+(3*masse_excedentaire)/(4*pi*(densite(rayon_lune,rayon_noyau,0)-densite(0,rayon_noyau,2))))**(1/3)
+    calibration = ((rayon_noyau**3)+(3*masse_excedentaire)/(4*pi*(densite(rayon_lune,rayon_noyau,1)-densite(0,rayon_noyau,2))))**(1/3)
     print(calibration)
     rayon_noyau = calibration
 
