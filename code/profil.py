@@ -2,15 +2,29 @@ import math
 from math import *
 import numpy as np
 import matplotlib.pyplot as plt
+from seafreeze import seafreeze as sf
+
 def densite(R,rayon_noyau,etat):
-    masse_vol_glace = 917
+    masse_vol_glace_I = 917
+    masse_vol_glace_III = 1160
+    masse_vol_glace_V = 1240
+    masse_vol_glace_VI = 1310
+    masse_vol_glace_VII = 1650
     masse_vol_eau = 1000
     masse_vol_silicate = 3700
     if (R<=rayon_noyau):
         return masse_vol_silicate
     else:
-        if (etat==0):
-            return masse_vol_glace
+        if (etat==1):
+            return masse_vol_glace_I
+        elif (etat==3):
+            return masse_vol_glace_III
+        elif (etat==5):
+            return masse_vol_glace_V
+        elif (etat==6):
+            return masse_vol_glace_VI
+        elif (etat==7):
+            return masse_vol_glace_VII
         else:
             return masse_vol_eau
         
@@ -39,26 +53,32 @@ def calc_I(rayon_lune,rayon_noyau,masse_lune,pas):
 
 def affichage(tour,g,pression,chaleur,T,I,etat,rayon,rayon_noyau):
     x = np.linspace(rayon,0,tour+1) 
+    plt.grid()
     plt.plot (x,g)
     plt.xlabel("rayon")
     plt.ylabel("g")
     plt.show()
+    plt.grid()
     plt.plot(x,pression)
     plt.xlabel("Rayon")
     plt.ylabel("pression")
     plt.show()
+    plt.grid()
     plt.plot(x,chaleur)
     plt.xlabel("Rayon")
     plt.ylabel("chaleur")
     plt.show()
+    plt.grid()
     plt.plot(x,T)
     plt.xlabel("Rayon")
     plt.ylabel("température")
     plt.show()
+    plt.grid()
     plt.plot(x,I)
     plt.xlabel("Rayon")
     plt.ylabel("moment d'inertie")
     plt.show()
+    plt.grid()
     plt.plot(x,etat)
     plt.xlabel("Rayon")
     plt.ylabel("etat")
@@ -92,61 +112,78 @@ def calc_g(rayon,rayon_noyau,G,etat,pas):
     return (G*masse/np.power(rayon,2))
 
 def etat_l(P,T):
-    delta_V = -0.0000885
-    chaleur_latente = 333.55
+    delta_V_ice_I = -0.0000885
+    chaleur_latente_I = 333.55
     P_atm = 101325
-    if (math. log(T)>math. log(273.15)+(delta_V/chaleur_latente)*(P-P_atm)):
+    if ((math. log(T)<math. log(273.15)+(delta_V_ice_I/chaleur_latente_I)*(P-P_atm)) and (P<209.9*10**6)):#glace 1
         return 1
+    elif ((P*10**(-6)>209.5+101.1*((T/251.15)**(42.86)-1)) and (P<350.1*10**6) and (P>=209.9*10**6)):#glace 3
+        return 3
+    elif((P*10**(-6)>355+373.6*((T/256.43)**(8.66)-1)) and (P<632.4*10**6) and (P>=350.1*10**6)):#glace 5
+        return 5
+    elif((P*10**(-6)>618.4+661.4*((T/272.73)**(4.69)-1)) and (P<2.216*10**9) and (P>=632.4*10**6) ):#glace 6
+        return 6
+    elif ((P*10**(-9)>2.67348*10**(-4)*T**(1.55299)-0.22933) and (P>=2.216*10**9)): #glace 7
+        return 7
     else:
         return 0
-    
+
 masse_lune = 1.4819E23
 rayon_lune = 2631.2E3
 moment_inertie = 0.3115
 pression_surface = 0. 
 temperature_surface = 110.
 chaleur_surface = 0.002
-pas = 200.
+pas = 50.
 G = 6.6743E-11
 g_lune = masse_lune*G/np.power(rayon_lune,2)
 print(g_lune)
 tour_global = 0
 masse = 0.
 rayon_noyau,densite_lune = calc_forme_init(masse_lune,rayon_lune)
-nb_iteration_max = 40
+nb_iteration_max = 3
 
 while (tour_global<nb_iteration_max):
+    
     tour_global += 1
     masse = 0
     rayon = rayon_lune
     tour = 0
-    etat = [0]
+    etat = [1]
     g = [g_lune]
     pression = [pression_surface]
     T = [temperature_surface]
     chaleur = [chaleur_surface]
     I = [0]
     calibration = 0
+    lim_g_estimation = 0.2*rayon_noyau
     
-    while (rayon>2*pas):#probleme de g a regler
+    while (rayon>2*pas):
         tour += 1
         rayon -= pas
         masse += pas*4*pi*np.power(rayon,2)*densite(rayon,rayon_noyau,etat[-1])
-        if ((masse_lune-masse)>0 and rayon>=0.1*rayon_lune):
+        if ((masse_lune-masse)>0 and rayon>=lim_g_estimation):
             g.append((masse_lune-masse)*G/(rayon**2))
-        elif(rayon<0.2*rayon_lune):
+        elif(rayon<lim_g_estimation):
             g.append(calc_g(rayon,rayon_noyau,G,0,pas))
         else:
             g.append(0)
         pression.append(pression[-1]+pas*g[-1]*densite(rayon,rayon_noyau,etat[-1]))
-        chaleur.append(chaleur[-1]+pas*(densite(rayon,rayon_noyau,etat)*S(rayon,rayon_noyau) - 2*chaleur[-1]/rayon))
-        T.append(T[-1]+pas*(chaleur[-1]/lambda_(rayon,rayon_noyau)))
+        chaleur.append(chaleur[-1]+pas*(densite(rayon,rayon_noyau,etat[-1])*S(rayon,rayon_noyau) - 2*chaleur[-1]/rayon))
+        
+        if (etat[-1] != 0):
+            T.append(T[-1]+pas*(chaleur[-1]/lambda_(rayon,rayon_noyau)))
+        elif(etat[-1] == 0 and (etat[-2] != 0)):
+            T.append(T[-1]-0.002)
+        else:
+            T.append(T[-1])
+            
         I.append(I[-1]-(pas*8/3*np.pi*rayon**4*densite(rayon,rayon_noyau,etat[-1])/(masse_lune*rayon_lune**2)))
         
         if (rayon>rayon_noyau):
             etat.append(etat_l(pression[-1],T[-1]))
         else:
-            etat.append(2)
+            etat.append(-1)
             
     while (rayon>0):
         rayon -= pas
