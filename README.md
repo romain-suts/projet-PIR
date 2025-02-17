@@ -12,12 +12,9 @@ Objectif n°2 : Ecrire un programme Python3 utilisant des fonctions à terme, af
 
 Objectif n°3 : Coder la résolution du moment d'inertie. 
 
-Objectif n°4 : Passer à un modèle 3,4,5 couches couplés au calcul du moment d'inertie.
+Objectif n° : Tracer le diagramme de phase de l'eau ??
 
-Objectif n°5 : Inclure des mouvements de convection dans les phases liquides.
-
-Objectif n°6 : Tracer le diagramme de phase de l'eau ??
-
+Objectif n° : Passer à un modèle 3,4,5 couches couplés au calcul du moment d'inertie.
 
 ## Sources
 https://www.researchgate.net/figure/a-Structure-interne-de-Ganymede-b-Profil-de-la-temperature-dans-lhydrosphere-de_fig1_298790311
