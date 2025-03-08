@@ -47,13 +47,17 @@ def S(r,rayon_noyau):#renvoi la puissance généré par kg de la couche
     else:#la glace n'emet pas de puissance radiogénique 
         return 0
 
-def lambda_(R,rayon_noyau,T):#renvoi la conduction thermique de la couche en fonction du materiau et de la temperature
+def lambda_(R,rayon_noyau,T,etat):#renvoi la conduction thermique de la couche en fonction du materiau et de la temperature
     conduc_ther_glace = 2.1
+    conduc_ther_eau = 0.6
     conduc_ther_silicate = 1.3
     if (R<=rayon_noyau):#si on est dans le noyau => silicate
         return conduc_ther_silicate
     else: #si on est dans le manteau glace => revoie la masse volumique de la glace/eau de la couche
-        return conduc_ther_glace-0.012*(T-273.15)
+        if (etat == 0):
+            return conduc_ther_eau
+        else:
+            return conduc_ther_glace-0.012*(T-273.15)
 
 def affichage(tour,g,pression,chaleur,T,I,etat,masse_vol,rayon):#fonction qui affiche les graphiques
     x = np.linspace(rayon,0,tour+1) 
@@ -66,11 +70,6 @@ def affichage(tour,g,pression,chaleur,T,I,etat,masse_vol,rayon):#fonction qui af
     plt.plot(x,pression)
     plt.xlabel("Rayon")
     plt.ylabel("pression")
-    plt.show()
-    plt.grid()
-    plt.plot(x,chaleur)
-    plt.xlabel("Rayon")
-    plt.ylabel("chaleur")
     plt.show()
     plt.grid()
     plt.plot(x,T)
@@ -119,11 +118,12 @@ def calc_g(rayon,G,pas,masse_vol):#calcule la valeur de g vers le centre du noya
     return (G*masse/np.power(rayon,2))
 
 def etat_l(rayon,rayon_noyau,P,T):#determine l'etat de la couche 
-    delta_V_ice_I = -0.0000885
+    delta_V_ice_I = -0.0000885#a changer
     chaleur_latente_I = 333.55
     P_atm = 101325
     if (rayon>rayon_noyau):
-        if ((math. log(T)<math. log(273.15)+(delta_V_ice_I/chaleur_latente_I)*(P-P_atm)) and (P<209.9*10**6)):#glace 1 
+        #if ((math. log(T)<math. log(273.15)+(delta_V_ice_I/chaleur_latente_I)*(P-P_atm)) and (P<209.9*10**6)):#glace 1 
+        if (T<273.15 and (P<209.9*10**6)):
             return 1
         elif ((P*10**(-6)>209.5+101.1*((T/251.15)**(42.86)-1)) and (P<350.1*10**6) and (P>=209.9*10**6)):#glace 3
             return 3
@@ -189,13 +189,13 @@ while (tour_global<nb_iteration_max):#boucle de calcule
             g.append(0)#si probleme renvoie la valeur 0
             
         pression.append(pression[-1]+pas*g[-1]*masse_vol[-1])
-        chaleur.append(chaleur[-1]+pas*(masse_vol[-1]*S(rayon,rayon_noyau) - 2*chaleur[-1]/rayon))
+        chaleur.append(chaleur[-1]-pas*(masse_vol[-1]*S(rayon,rayon_noyau) - 2*chaleur[-1]/rayon))
         
         #evolution de la temperature
         if((etat[-1] == 0 or (etat[-1] == -2))):#cherche a savoir si on est dans de l'eau loin des parois => convection
             T.append(T[-1])
         else:#on est dans une zone solide => diffusion
-            T.append(T[-1]+pas*(chaleur[-1]/lambda_(rayon,rayon_noyau,T[-1])))
+            T.append(T[-1]+pas*(chaleur[-1]/lambda_(rayon,rayon_noyau,T[-1],etat[-1])))
 
         I.append(I[-1]-(pas*8/3*np.pi*rayon**4*masse_vol[-1]/(masse_lune*rayon_lune**2))) #incrementation du moment d'inertie de la couche
         
@@ -211,5 +211,17 @@ while (tour_global<nb_iteration_max):#boucle de calcule
     calibration = ((rayon_noyau**3)+(3*masse_excedentaire)/(4*pi*(masse_vol_glace-masse_vol_silicate)))**(1/3)
     print("l'estimation de rayon du noyau à l'iteration {} est {} m.".format(tour_global,calibration))
     rayon_noyau = calibration
+    
+#sauvegarde dans un fichier
+
+fichier = open("data.txt", "w")
+rayon = rayon_lune
+fichier.write("rayon temp g pression etat\n")
+for i in range(len(I)):
+    
+    fichier.write("{} {} {} {} {}\n".format(rayon,T[i],g[i],pression[i],etat[i]))
+    rayon-=pas
+    
+fichier.close()
 print("l'ecart au moment d'inertie est de {}".format(I[0]-moment_inertie))
 affichage(tour,g,pression,chaleur,T,I,etat,masse_vol,rayon_lune)
