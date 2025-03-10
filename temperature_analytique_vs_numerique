@@ -32,8 +32,8 @@ h = distr_rayon[1]
 prod_radio = 6.6E-9 # W/m^3
 k_silicate = 0.22 # W/m²/K
 k_glace = 2.1 # W/m²/K
-T_surf = 110 # K
-flux_surf = 0.002 
+T_surf = 125 # K
+flux_surf = 0.004 # W/m² 
 
 def source_chaleur(r) :
     if r <= rayon_silicate :
