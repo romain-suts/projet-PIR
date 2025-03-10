@@ -10,7 +10,6 @@ composé de deux couches de densités constantes.
 # Modules nécessaires
 import numpy as np
 import matplotlib.pyplot as plt 
-import CoolProp.CoolProp as cp
 plt.close('all')
 
 
@@ -161,12 +160,11 @@ facteur_inertie = calcul_facteur_inertie()
                                  #############################################
 
 # CALCUL DU FLUX DE TEMPERATURE
-prod_radio = 2E-12 # W/kg
-k_silicate = 0.22 # W/m²/kg
-k_glace = 2.1 # W/m²/kg
-flux_surf = 0.002 # W/m²
-T_surf = 110 # K
-
+prod_radio = 6.6E-9 # W/m^3
+k_silicate = 0.22 # W/m²/K
+k_glace = 2.1 # W/m²/K
+T_surf = 125 # K
+F_surf = 0.004 #W/m²
 
 def source_chaleur(r) :
     if r <= rayon_silicate :
@@ -207,23 +205,25 @@ def calcul_profil_temperature() :
     
     # Réajustement du profil grâce à la température de surface
     for i in range(len(distr_rayon)) :
-        T[i] = T[i] - T[len(distr_rayon)-1] + T_surf
+        T[i] = T[i] - T[len(distr_rayon) - 1] + T_surf
         
     
     # SOLUTION ANALYTIQUE DU PROFIL DE TEMPERATURE (pour comparaison)
     T_analytique = np.zeros(len(distr_rayon))
-    # for i in range(len(distr_rayon)):
-    #     if distr_rayon[i] <= rayon_silicate:
-    #         T_analytique[i] = T_surf + source_chaleur / (6*k_silicate) * (rayon**2 - distr_rayon[i]**2)
-    #     else:
-    #         T_analytique[i] = T_surf + rayon * flux_surf / k_glace *(rayon/distr_rayon[i] - 1)
-
+    T_analytique[0] = source_chaleur(0) * rayon**2 / (6 * k_silicate)
+    
+    for i in range(1, len(distr_rayon)) :
+        if distr_rayon[i] < rayon_silicate :
+            T_analytique[i] = source_chaleur(distr_rayon[i]) / (6 * k_silicate) * (rayon**2 - distr_rayon[i]**2)
+        else :
+            T_analytique[i] = T_surf + (T_analytique[7505] - T_surf) * (distr_rayon[i] - rayon) / (rayon_silicate - rayon)
+ 
     return T, T_analytique
 
 profil_temperature, profil_temperature_analytique = calcul_profil_temperature()
 
 plt.figure(5)
-# plt.plot(distr_rayon*10**(-3),profil_temperature_analytique, color='red', label="solution analytique")
+plt.plot(distr_rayon*10**(-3),profil_temperature_analytique, color='red', label="solution analytique")
 plt.plot(distr_rayon*1E-3, profil_temperature, color='blue', label="solution numerique")
 plt.xlabel("Rayon (en km)")
 plt.ylabel("Température (K)")
@@ -232,39 +232,38 @@ plt.legend()
 plt.grid()
 
 
-def phase_eau(r, P, T) :
-    if r <= rayon_silicate :
-        return np.nan
-    else :
-        return cp.PhaseSI('P', P, 'T', T, 'Water')
+# def phase_eau(r, P, T) :
+#     if r <= rayon_silicate :
+#         return np.nan
+#     else :
+#         return cp.PhaseSI('P', P, 'T', T, 'Water')
 
-def etat_couches() :
-    etat = []
+# def etat_couches() :
+#     etat = []
     
-    # trad : solide=0 liq=1
-    trad = []
-    for i in range(len(distr_rayon)) : 
-        etat.append(phase_eau(distr_rayon[i], profil_pression[i], profil_temperature[i]))
-        if etat[i] == 'supercritical' :
-            trad.append(0)
-        elif etat[i] == 'supercritical_liquid' :
-            trad.append(1)
-        else : 
-            trad.append(-1)
+#     # trad : solide=0 liq=1
+#     trad = []
+#     for i in range(len(distr_rayon)) : 
+#         etat.append(phase_eau(distr_rayon[i], profil_pression[i], profil_temperature[i]))
+#         if etat[i] == 'supercritical' :
+#             trad.append(0)
+#         elif etat[i] == 'supercritical_liquid' :
+#             trad.append(1)
+#         else : 
+#             trad.append(-1)
         
             
-    return etat, trad
+#     return etat, trad
 
-etat, cbe_etat = etat_couches()
+# etat, cbe_etat = etat_couches()
 
-plt.figure(6)
-plt.plot(distr_rayon*1E-3, cbe_etat, color='blue')
-plt.xlabel("Rayon (en km)")
-plt.ylabel("Etat")
-plt.title("Variation de la phase de l'eau dans Ganymède")
-plt.legend()
-plt.grid()
-
+# plt.figure(6)
+# plt.plot(distr_rayon*1E-3, cbe_etat, color='blue')
+# plt.xlabel("Rayon (en km)")
+# plt.ylabel("Etat")
+# plt.title("Variation de la phase de l'eau dans Ganymède")
+# plt.legend()
+# plt.grid()
 
 
 
