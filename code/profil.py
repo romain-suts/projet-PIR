@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 #fonction qui retourne la masse volumique de la couche 
-def densite(R,rayon_noyau,rayon_metallique,etat,P,T):
+def densite(R,rayon_noyau,rayon_metallique,etat,P,T,fraction_silicate_glace,masse_vol_silicate,masse_vol_metallique):
     #etablissement des constantes a des pressions et temperature de reference 
     
     #diferents masses volumiques de reference
@@ -16,8 +16,6 @@ def densite(R,rayon_noyau,rayon_metallique,etat,P,T):
     masse_vol_glace_VI = 1310 # kg/m^3
     masse_vol_glace_VII = 1650 # kg/m^3
     masse_vol_eau = 1000 # kg/m^3
-    masse_vol_silicate = 3000 # kg/m^3
-    masse_vol_metallique = 10000 # kg/m^3
     
     #diferents compressibilité isotherme de reference
     
@@ -52,25 +50,27 @@ def densite(R,rayon_noyau,rayon_metallique,etat,P,T):
     #les nombres renvoies au numéro de glace 
     else:
         
+        masse_silicate_glace = fraction_silicate_glace*masse_vol_silicate*(1+(P-101325)*compressibilite_isotherme_silicate+3*10**(-5)*T) #masse de la fraction de silicate dans la glace
+        
         if (etat==1):#faire attention aux temperatures de references pour les valeurs de compressibilite de d'expansion
             
-            return masse_vol_glace_I*(1+(P-101325)*compressibilite_isotherme_glace_I+expansion_thermique_glace_I*(T-273.15))
+            return (1-fraction_silicate_glace)*masse_vol_glace_I*(1+(P-101325)*compressibilite_isotherme_glace_I+expansion_thermique_glace_I*(T-273.15))+masse_silicate_glace
         
         elif (etat==3):
             
-            return masse_vol_glace_III*(1+(P-350*10**6)*compressibilite_isotherme_glace_III+expansion_thermique_glace_III*(T-273.15))
+            return (1-fraction_silicate_glace)*masse_vol_glace_III*(1+(P-350*10**6)*compressibilite_isotherme_glace_III+expansion_thermique_glace_III*(T-273.15))+masse_silicate_glace
         
         elif (etat==5):
         
-            return masse_vol_glace_V*(1+(P-350*10**6)*compressibilite_isotherme_glace_V+expansion_thermique_glace_V*(T-273.15))
+            return (1-fraction_silicate_glace)*masse_vol_glace_V*(1+(P-350*10**6)*compressibilite_isotherme_glace_V+expansion_thermique_glace_V*(T-273.15))+masse_silicate_glace
         
         elif (etat==6):
         
-            return masse_vol_glace_VI*(1+(P-0.6*10**9)*compressibilite_isotherme_glace_VI+expansion_thermique_glace_VI*(T-273.15))
+            return (1-fraction_silicate_glace)*masse_vol_glace_VI*(1+(P-0.6*10**9)*compressibilite_isotherme_glace_VI+expansion_thermique_glace_VI*(T-273.15))+masse_silicate_glace
 
         elif (etat==7):
         
-            return masse_vol_glace_VII*(1+(P-2.5*10**9)*compressibilite_isotherme_glace_VII+expansion_thermique_glace_VII*(T-(273.15+25)))
+            return (1-fraction_silicate_glace)*masse_vol_glace_VII*(1+(P-2.5*10**9)*compressibilite_isotherme_glace_VII+expansion_thermique_glace_VII*(T-(273.15+25)))+masse_silicate_glace
         
         #les conditions ne remplicent aucun type de glace donc on a de l'eau
         else:
@@ -162,13 +162,10 @@ def affichage(tour,g,pression,chaleur,T,I,etat,masse_vol,rayon):#fonction qui af
     plt.show()  
 
 #fonction qui permet de calculer une premiere de forme de lune qu'avec de la glace en surfa ce 
-def calc_forme_init(masse,rayon,rayon_metallique): #fonction qui intialise la premiere forme de la lune pour des masses volumique constante (on cherche a retrouver la masse de la lune)
+def calc_forme_init(masse,rayon,rayon_metallique,densite_glace,densite_silicate,densite_metal): #fonction qui intialise la premiere forme de la lune pour des masses volumique constante (on cherche a retrouver la masse de la lune)
     
     #constante 
-    
-    densite_glace = 917 # kg/m^3 glace pure
-    densite_silicate = 3000 # kg/m^3 valeur a peut etre redeterminée suivant le noyau que l'on cherche a avoir !! penser a changer les valeurs pour les autres fonctions 
-    densite_metal = 10000 # kg/m^3 valeur prise grossierement peut etre change suivant la composition voulu
+
     volume =4/3*pi*np.power(rayon,3) #m^3
     densite_lune = masse/(volume) # kg/m^3
     print("la densité de la lune est " + str(densite_lune))
@@ -197,7 +194,7 @@ def calc_g(rayon,G,pas,masse_vol):
 def etat_l(rayon,rayon_noyau,rayon_metallique,P,T):
     
     #constantes
-    delta_V_ice_I = 1/densite(rayon_noyau+1,rayon_noyau,rayon_metallique,1,P,T)-1/densite(rayon_noyau+1,rayon_noyau,rayon_metallique,0,P,T) #m^3
+    delta_V_ice_I = 1/densite(rayon_noyau+1,rayon_noyau,rayon_metallique,1,P,T,0,0,0)-1/densite(rayon_noyau+1,rayon_noyau,rayon_metallique,0,P,T,0,0,0) #m^3
     chaleur_latente_I = 333.55*1000 #J/kg
     P_atm = 101325 #Pa
     temp_fusion_metal =  1553+273.15 #K
@@ -245,14 +242,16 @@ def etat_l(rayon,rayon_noyau,rayon_metallique,P,T):
 #intialisation des constantes
 
 #constante de masse
-masse_vol_glace = 917 #kg/m^3
-masse_vol_silicate = 3000 #kg/m^3
+masse_vol_glace_pur = 917. #kg/m^3
+masse_vol_glace = 972. #kg/m^3
+masse_vol_silicate = 3004. #kg/m^3
+masse_vol_metal = 10000.
 masse_lune = 1.4819E23 #kg
 masse = 0. #kg
 
 #constante géometrique
 rayon_lune = 2631.2E3 #m
-rayon_metallique = 0*rayon_lune
+rayon_metallique = 0.0*rayon_lune
 
 #constante lie a la gravitation
 G = 6.6743E-11 #SI
@@ -265,13 +264,14 @@ pression_surface = 0. #Pa
 #constante thermodynamique
 temperature_surface = 110. #K
 chaleur_surface = 0.002 #W/m^2
-emmission_radiogénique = 2.406E-12 # W/kg
+emmission_radiogénique = 2.6e-12 # W/kg
 
 #constante lie aux iterations
-pas = 1000. #m
+pas = 100. #m
 tour_global = 0
-rayon_noyau,densite_lune = calc_forme_init(masse_lune,rayon_lune,rayon_metallique)
+rayon_noyau,densite_lune = calc_forme_init(masse_lune,rayon_lune,rayon_metallique,masse_vol_glace,masse_vol_silicate,masse_vol_metal)
 nb_iteration_max = 10
+fraction_silicate_glace = 1-masse_vol_glace_pur/masse_vol_glace
 
 print("la gravité à la surface de la lune est de {}".format(g_lune))
 
@@ -290,7 +290,7 @@ while (tour_global<nb_iteration_max):
     T = [temperature_surface]
     chaleur = [chaleur_surface]
     I = [0]
-    masse_vol = [densite(rayon,rayon_noyau,rayon_metallique,etat[-1],pression[-1],T[-1])]
+    masse_vol = [densite(rayon,rayon_noyau,rayon_metallique,etat[-1],pression[-1],T[-1],fraction_silicate_glace,masse_vol_silicate,masse_vol_metal)]
     
     #constantes pour eviter des erreurs de calcul 
     lim_g_estimation = 0.2*rayon_noyau #limite du basculement de methode pour calculer g
@@ -320,7 +320,7 @@ while (tour_global<nb_iteration_max):
         
         #evolution de la temperature
         #cherche a savoir si on est dans un liquide => convection
-        if((etat[-1] == 0 or (etat[-1] == -2))):
+        if((etat[-1] == 0 or (etat[-1] == -2) or (etat[-1] == -4))):
             T.append(T[-1])
         
         #on est dans une zone solide => diffusion
@@ -332,7 +332,7 @@ while (tour_global<nb_iteration_max):
         
         #etablissement de l'etat de la couche
         etat.append(etat_l(rayon,rayon_noyau,rayon_metallique,pression[-1],T[-1]))
-        masse_vol.append(densite(rayon,rayon_noyau,rayon_metallique,etat[-1],pression[-1],T[-1]))
+        masse_vol.append(densite(rayon,rayon_noyau,rayon_metallique,etat[-1],pression[-1],T[-1],fraction_silicate_glace,masse_vol_silicate,masse_vol_metal))
         
     #fin de la boucle d'iteration pour une iteration
     
@@ -356,7 +356,7 @@ rayon = rayon_lune
 fichier.write("rayon temp g pression etat\n")
 for i in range(len(I)):
     
-    fichier.write("{} {} {} {} {} {} {}\n".format(rayon,T[i],g[i],pression[i],etat[i],masse_vol[i],chaleur[i]))
+    fichier.write("{}\t {}\t {}\t {}\t {}\t {}\t {}\n".format(rayon,T[i],g[i],pression[i],etat[i],masse_vol[i],chaleur[i]))
     rayon-=pas
     
 fichier.close()
@@ -365,4 +365,5 @@ fichier.close()
 print("ecart chaleur porduite interne par rapport a celle degager = {}W".format(f"{(chaleur_surface*4*pi*rayon_lune**2-(4/3)*pi*masse_vol_silicate*emmission_radiogénique*(rayon_noyau**3-rayon_metallique**3)):.2e}"))
 print("le silicate devrait degager {} W/kg pour que il n'y ait que les silicates qui degages de la chaleur".format((chaleur_surface*4*pi*rayon_lune**2)/((4/3)*pi*masse_vol_silicate*(rayon_noyau**3-rayon_metallique**3))))
 print("l'ecart au moment d'inertie est de {}".format(I[0]-moment_inertie))
+print("L'interface glace silicate se fait à {0:.3f} du rayon de la lune".format((rayon_noyau/rayon_lune)))  
 affichage(tour,g,pression,chaleur,T,I,etat,masse_vol,rayon_lune)
