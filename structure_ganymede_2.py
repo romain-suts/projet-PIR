@@ -27,7 +27,7 @@ rayon = 2612.1E3  # m
 masse = 1.48E23  # kg
 
 # ECHANTILLONAGE DU RAYON
-distr_rayon = np.linspace(0, rayon, 10000)
+distr_rayon = np.linspace(0, rayon, 1000)
 
 # DEFINITION DU PAS D'INTEGRATION
 h = distr_rayon[1]
@@ -134,7 +134,6 @@ plt.plot(distr_rayon*1E-3, profil_pression)
 plt.xlabel("Rayon (en km)")
 plt.ylabel("Pression (Pa)")
 plt.title("Variation de la pression dans Ganymède")
-plt.legend()
 plt.grid()
 
 
@@ -266,23 +265,69 @@ plt.grid()
 # plt.legend()
 # plt.grid()
 
+
+
+
+# FLUX DE CHALEUR 
+def dqdr(q, r) :
+    return densite(r) * source_chaleur(r) - 2 * q /r
+
+# PROFIL DE TEMPERATURE
+def dTdr(q, r) :
+    return - q / conductivite_th(r)
+
+flux = np.zeros(len(distr_rayon))
+T = np.zeros(len(distr_rayon))
+T[0] = 200000
+
 Water = CP.AbstractState("HEOS", "Water")
 state = []
-z = 0
 
-for i in range (0, len(distr_rayon)-1) :
-    if distr_rayon[i] >= rayon_silicate :
-        print( distr_rayon[i], '/', rayon_silicate)
-        if profil_temperature[i] < Water.melting_line(CP.iT, CP.iP, profil_pression[i]):
-            state.append(1) #solide
-        else : 
-            state.append(0) #liquide
-    else :
-        state.append(-1)
+T_test = [1]
+T_test[0] = 300000
+T_test.append(T[0])
+j = 1
 
-state.append(1) # glace à la surface 
+while abs(T_test[j]-T_test[j-1]) >= 100 :
+    state = []
+    for i in range (0, len(distr_rayon)-1) :
+        
+        # Dans la couche de glace/eau 
+        if distr_rayon[i] >= rayon_silicate :
+            
+            # Si dans la glace : calcul normal du flux
+            if T[i] < Water.melting_line(CP.iT, CP.iP, profil_pression[i]):
+                flux[i+1] = flux[i] + h * dqdr(flux[i], distr_rayon[i+1])
+                T[i+1] = T[i] + h * dTdr(flux[i+1], distr_rayon[i+1])
+                
+                state.append(1) #solide
+                
+            # Si dans l'eau : T=cte
+            else : 
+                T[i+1] = T[i]
+                
+                state.append(0) #liquide
+                
+        # Dans silicate : calcul normal de T
+        else :
+            flux[i+1] = flux[i] + h * dqdr(flux[i], distr_rayon[i+1])
+            T[i+1] = T[i] + h * dTdr(flux[i+1], distr_rayon[i+1])
+            
+            state.append(-1)
+            
+    # Réajustement du profil grâce à la température de surface
+    for i in range(len(distr_rayon)) :
+        T[i] = T[i] - T[len(distr_rayon)-1] + T_surf
+    
+    state.append(1) # glace à la surface 
+    T_test.append(T[0])
+    j += 1
+    print(j)
+    
+    
+        
 
-print(state)
+
 
 plt.figure(6)
 plt.plot(distr_rayon*1E-3, state, color='blue')
@@ -290,7 +335,6 @@ plt.plot(distr_rayon*1E-3, state, color='blue')
 plt.xlabel("Rayon (en km)")
 plt.ylabel("Etat : silicate=-1 ; eau_liq=0 ; glace=1")
 plt.title("Variation de la phase de l'eau dans Ganymède")
-plt.legend()
 plt.grid()
 
 
