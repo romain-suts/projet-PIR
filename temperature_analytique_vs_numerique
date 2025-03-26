@@ -45,7 +45,7 @@ def profil_temperature() :
     T = np.zeros(len(distr_rayon))
     for i in range (1, len(distr_rayon)) : 
         if distr_rayon[i] < rayon_silicate : 
-       
+        
             def dTdr1(r, source_chaleur) : 
                 return - prod_radio * r / (3 * k_silicate)
             
