@@ -10,6 +10,8 @@ composé de deux couches de densités constantes.
 # Modules nécessaires
 import numpy as np
 import matplotlib.pyplot as plt 
+import CoolProp.CoolProp as CP
+
 plt.close('all')
 
 
@@ -25,7 +27,7 @@ rayon = 2612.1E3  # m
 masse = 1.48E23  # kg
 
 # ECHANTILLONAGE DU RAYON
-distr_rayon = np.linspace(0, rayon, 10000)
+distr_rayon = np.linspace(0, rayon, 1000)
 
 # DEFINITION DU PAS D'INTEGRATION
 h = distr_rayon[1]
@@ -132,7 +134,6 @@ plt.plot(distr_rayon*1E-3, profil_pression)
 plt.xlabel("Rayon (en km)")
 plt.ylabel("Pression (Pa)")
 plt.title("Variation de la pression dans Ganymède")
-plt.legend()
 plt.grid()
 
 
@@ -160,11 +161,12 @@ facteur_inertie = calcul_facteur_inertie()
                                  #############################################
 
 # CALCUL DU FLUX DE TEMPERATURE
-prod_radio = 6.6E-9 # W/m^3
-k_silicate = 0.22 # W/m²/K
-k_glace = 2.1 # W/m²/K
-T_surf = 125 # K
-F_surf = 0.004 #W/m²
+prod_radio = 2E-12 # W/kg
+k_silicate = 0.22 # W/m/kg
+k_glace = 2.1 # W/m/kg
+flux_surf = 0.002 # W/m²
+T_surf = 110 # K
+
 
 def source_chaleur(r) :
     if r <= rayon_silicate :
@@ -205,25 +207,23 @@ def calcul_profil_temperature() :
     
     # Réajustement du profil grâce à la température de surface
     for i in range(len(distr_rayon)) :
-        T[i] = T[i] - T[len(distr_rayon) - 1] + T_surf
+        T[i] = T[i] - T[len(distr_rayon)-1] + T_surf
         
     
     # SOLUTION ANALYTIQUE DU PROFIL DE TEMPERATURE (pour comparaison)
     T_analytique = np.zeros(len(distr_rayon))
-    T_analytique[0] = source_chaleur(0) * rayon**2 / (6 * k_silicate)
-    
-    for i in range(1, len(distr_rayon)) :
-        if distr_rayon[i] < rayon_silicate :
-            T_analytique[i] = source_chaleur(distr_rayon[i]) / (6 * k_silicate) * (rayon**2 - distr_rayon[i]**2)
-        else :
-            T_analytique[i] = T_surf + (T_analytique[7505] - T_surf) * (distr_rayon[i] - rayon) / (rayon_silicate - rayon)
- 
+    # for i in range(len(distr_rayon)):
+    #     if distr_rayon[i] <= rayon_silicate:
+    #         T_analytique[i] = T_surf + source_chaleur / (6*k_silicate) * (rayon**2 - distr_rayon[i]**2)
+    #     else:
+    #         T_analytique[i] = T_surf + rayon * flux_surf / k_glace *(rayon/distr_rayon[i] - 1)
+
     return T, T_analytique
 
 profil_temperature, profil_temperature_analytique = calcul_profil_temperature()
 
 plt.figure(5)
-plt.plot(distr_rayon*10**(-3),profil_temperature_analytique, color='red', label="solution analytique")
+# plt.plot(distr_rayon*10**(-3),profil_temperature_analytique, color='red', label="solution analytique")
 plt.plot(distr_rayon*1E-3, profil_temperature, color='blue', label="solution numerique")
 plt.xlabel("Rayon (en km)")
 plt.ylabel("Température (K)")
@@ -268,7 +268,74 @@ plt.grid()
 
 
 
+# FLUX DE CHALEUR 
+def dqdr(q, r) :
+    return densite(r) * source_chaleur(r) - 2 * q /r
 
+# PROFIL DE TEMPERATURE
+def dTdr(q, r) :
+    return - q / conductivite_th(r)
+
+flux = np.zeros(len(distr_rayon))
+T = np.zeros(len(distr_rayon))
+T[0] = 200000
+
+Water = CP.AbstractState("HEOS", "Water")
+state = []
+
+T_test = [1]
+T_test[0] = 300000
+T_test.append(T[0])
+j = 1
+
+while abs(T_test[j]-T_test[j-1]) >= 100 :
+    state = []
+    for i in range (0, len(distr_rayon)-1) :
+        
+        # Dans la couche de glace/eau 
+        if distr_rayon[i] >= rayon_silicate :
+            
+            # Si dans la glace : calcul normal du flux
+            if T[i] < Water.melting_line(CP.iT, CP.iP, profil_pression[i]):
+                flux[i+1] = flux[i] + h * dqdr(flux[i], distr_rayon[i+1])
+                T[i+1] = T[i] + h * dTdr(flux[i+1], distr_rayon[i+1])
+                
+                state.append(1) #solide
+                
+            # Si dans l'eau : T=cte
+            else : 
+                T[i+1] = T[i]
+                
+                state.append(0) #liquide
+                
+        # Dans silicate : calcul normal de T
+        else :
+            flux[i+1] = flux[i] + h * dqdr(flux[i], distr_rayon[i+1])
+            T[i+1] = T[i] + h * dTdr(flux[i+1], distr_rayon[i+1])
+            
+            state.append(-1)
+            
+    # Réajustement du profil grâce à la température de surface
+    for i in range(len(distr_rayon)) :
+        T[i] = T[i] - T[len(distr_rayon)-1] + T_surf
+    
+    state.append(1) # glace à la surface 
+    T_test.append(T[0])
+    j += 1
+    print(j)
+    
+    
+        
+
+
+
+plt.figure(6)
+plt.plot(distr_rayon*1E-3, state, color='blue')
+
+plt.xlabel("Rayon (en km)")
+plt.ylabel("Etat : silicate=-1 ; eau_liq=0 ; glace=1")
+plt.title("Variation de la phase de l'eau dans Ganymède")
+plt.grid()
 
 
 
