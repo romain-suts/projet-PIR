@@ -72,7 +72,7 @@ ax1.set_ylabel('$p_i / p_m$', color='tab:blue')
 ax1.tick_params(axis='y', labelcolor='tab:blue')
 ax1.set_ylim(1,3)
 ax1.legend(loc='lower left')
-
+    
 # Deuxième axe pour Ri/Re
 ax2 = ax1.twinx()  
 ax2.plot(pe_pm, Ri_Re, linestyle='dashed', color='tab:red', label='$R_i / R_e$')

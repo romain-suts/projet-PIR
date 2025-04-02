@@ -3,7 +3,120 @@ import math
 from math import *
 import numpy as np
 import matplotlib.pyplot as plt
+from pylab import *
 
+#fonction qui retourne la viscosité de la glace 
+def ice_viscosity(T):
+	#tau is the stress in MPa and T the temperature in K
+	Tref=255
+	R=8.314
+	Ea=where(T<263,5.9e4,1.9e5)
+	eta_ref=1.e15
+	return eta_ref*np.exp(Ea/(R*Tref)*(Tref/T-1))
+#fonction qui renvoie la chaleur produite par les condrite en W/kg
+def chaleur_radiactive (SSage):
+
+
+	chondrite='CM'
+
+	MeV=1.602e-13        #Joule
+	nspy=365.25*24*3600. #number of seconds per a year
+	Na=6.02214129e23     #Avogadro constant
+	nX    =np.array([' 26Al',  ' 40K',  ' 60Fe', '232Th',  '235U',  '238U'])
+	t_demi=np.array([ 7.17e5, 1.265e9, 2.620e6, 1.405e10, 7.038e8, 4.468e9])  #years
+	E     =np.array([   3.12,  0.6087,    2.71,     39.0,    42.7,    46.1])  #Mev
+	m_mole=np.array([  26.98,    39.1,   55.85,   323.04,  238.03,  238.03])  #g
+	X_CI  =np.array([ 8.6e-3,  5.6e-4, 1.82e-1,   2.9e-8,  8.2e-9,  8.2e-9])/0.82  
+	X_CM  =np.array([11.8e-3,  4.0e-4, 2.10e-1,   4.0e-8, 11.0e-9, 11.0e-9])/0.874  
+	nXsXpd=np.array([     0., 1.18e-4,      0.,       1.,  7.2e-3,  0.9928])
+	nXsXi =np.array([  5.e-5,      0.,   1.e-8,       0.,      0.,      0.])
+	tau   =t_demi/log(2.)
+	Xpd   =np.ones(6)
+	Xi    =np.zeros(6)
+	nXi   =np.zeros(6)
+	nXpd  =np.zeros(6)
+	Qpd   =np.zeros(6)
+	Hpd   =np.zeros(6)
+	Qi    =np.zeros(6)
+	Hi    =np.zeros(6)
+
+
+
+	for i in range(0,6):
+		if nXsXpd[i]>0:
+			nXpd[i]  = nXsXpd[i]*Xpd[i]
+			nXi[i]   = nXpd[i]*exp(SSage/(tau[i]))
+			Xi[i]    = Xpd[i]-nXpd[i]+nXi[i]
+			nXsXi[i] = nXi[i]/Xi[i]
+		else:
+			Xi[i]    = Xpd[i]
+			nXi[i]   = nXsXi[i]*Xi[i]
+
+
+	Xi[4:6]=nXi[4]+nXi[5]
+	nXsXi[4:6] = nXi[4:6]/Xi[4:6]
+
+
+	print('{:<10}{:^20}{:^20}{:^20}{:^20}'.format(' nX', '[nX]/[X]pd','[X]pd', '[nX]/[X]i','[X]i'))
+	for i in range(0,6):
+		print( '{:<10}   {:<20.3e} {:<20.3e} {:<20.3e} {:<20.3e}'.format(nX[i], nXsXpd[i], Xpd[i], nXsXi[i], Xi[i]))
+
+	print( '')
+	print( '{:<10}{:^10}{:^30}{:^10}{:^30}{:^10}'.format(' nX','t_1/2', 'Qpd','Hpd', 'Qi','Hi'))
+	for i in range(0,6):
+		Qpd[i]=nXpd[i]*E[i]*MeV*Na/(m_mole[i]*1.e-3)
+		Hpd[i]=Qpd[i]/(tau[i]*nspy)
+		Qi[i]=nXi[i]*E[i]*MeV*Na/(m_mole[i]*1.e-3)
+		Hi[i]=Qi[i]/(tau[i]*nspy)
+		print( '{:<10}{:<20.3e}{:<20.3e}{:<20.3e}{:<20.3e}{:<20.3e}'.format(nX[i], t_demi[i], Qpd[i], Hpd[i], Qi[i], Hi[i]))
+
+	nt=300
+
+	time=SSage*exp(-linspace(13,0,nt))
+
+	Xchond=X_CI
+	if (chondrite == 'CM'):
+		Xchond=X_CM
+
+
+	H=np.zeros((7,nt))
+
+	H[0,:]=Hi[0]*exp(-(time[:])/tau[0])*Xchond[0]
+	for i in range(0,6):
+		H[i,:]=H[i-1,:]+Hi[i]*Xchond[i]*exp(-(time[:])/tau[i])
+		H[i,:]=         Hi[i]*Xchond[i]*exp(-(time[:])/tau[i])
+		H[6,:]=H[6,:]+H[i,:]
+
+	print("\n Initial total heat production in CM chondrites    : {:.3e} W/kg".format(H[-1,0]))
+	print(" Present day total heat production in CM chondrites: {:.3e} W/kg\n".format(H[-1,-1]))
+
+
+	fig=plt.figure(figsize=(7,7))
+	plt.yscale('log')
+	plt.xscale('log')
+	plt.xlim([1.e4,SSage])
+	plt.xlabel('Time since folar system formation (years)')
+	plt.ylabel('Heat power (W/kg of dry '+chondrite+')')
+	plt.ylim([1.e-14,1.e-6])
+	plt.plot(time,H[6,:],label='Total')
+	for i in range(6):
+		plt.plot(time,H[i,:],label=nX[i])
+
+	plt.legend()
+
+	savefig("Qrad_"+chondrite+"_du_systeme_stellaire.pdf")
+	return (H[-1,-1])
+
+#fonction qui renvoie la capacite thermique de chaque element 
+def capa_ther(etat):
+    capa_ther_glace = 2060 #J/kg/K
+    capa_ther_silicate = 44.4 #J/kg/K
+    capa_ther_metal = 0.449 #J/kg/K
+    if (etat >= 1):
+        return capa_ther_glace
+    elif (etat <= 3):
+        return capa_ther_metal 
+    return capa_ther_silicate
 #fonction qui retourne la masse volumique de la couche 
 def densite(R,rayon_noyau,rayon_metallique,etat,P,T,fraction_silicate_glace,masse_vol_silicate,masse_vol_metallique):
     #etablissement des constantes a des pressions et temperature de reference 
@@ -78,7 +191,7 @@ def densite(R,rayon_noyau,rayon_metallique,etat,P,T,fraction_silicate_glace,mass
             return masse_vol_eau*(1+(P-101325)/compressibilite_isotherme_eau+2.07*10**(-4)*(T-293.15))
         
 #fonction qui renvoie l'emission radiogénique de la couche W/kg
-def Source(r,rayon_noyau,emmission_radiogénique,effet_maree,masse_vol):#renvoi la puissance généré par kg de la couche
+def Source(r,rayon_noyau,emmission_radiogénique,effet_maree,masse_vol):#renvoi la puissance générée par kg de la couche
     
     #puissance emise par le silicate
     if(r<=rayon_noyau):
@@ -167,6 +280,12 @@ def affichage(tour,g,pression,chaleur,T,I,etat,masse_vol,rayon):#fonction qui af
     plt.xlabel("Rayon(m)")
     plt.ylabel("masse volumique (kg/m^3)")
     plt.show()  
+    plt.grid()
+    plt.plot (x,reynolds)
+    plt.title("Nombre de Reynolds")
+    plt.xlabel("")
+    plt.ylabel("g(m/s²)")
+    plt.show()
 
 #fonction qui permet de calculer une premiere de forme de lune qu'avec de la glace en surfa ce 
 def calc_forme_init(masse,rayon,rayon_metallique,densite_glace,densite_silicate,densite_metal): #fonction qui intialise la premiere forme de la lune pour des masses volumique constante (on cherche a retrouver la masse de la lune)
@@ -254,6 +373,8 @@ def calc_T(T,Q,k,rayon,Source,pas):
     return (ordre_0-pas*ordre_1-(pas**2)*ordre_2/2-((pas**3)/6)*ordre_3)
 
 #intialisation des constantes
+#age du systeme etudié
+SSage=4.5673e9       #years
 
 #constante de masse
 masse_vol_glace_pur = 917. #kg/m^3
@@ -278,7 +399,7 @@ pression_surface = 0. #Pa
 #constante thermodynamique
 temperature_surface = 110. #K
 chaleur_surface = 0.002 #W/m^2
-emmission_radiogénique = 2e-12 # W/kg
+emmission_radiogénique = chaleur_radiactive(SSage) # W/kg
 tidal_heating = 0 #W/m^3
 
 #constante lie aux iterations
@@ -311,7 +432,7 @@ while (tour_global<nb_iteration_max and delta_rayon>pas):
     I = [0]
     masse_vol = [densite(rayon,rayon_noyau,rayon_metallique,etat[-1],pression[-1],T[-1],fraction_silicate_glace,masse_vol_silicate,masse_vol_metal)]
     emmission_condrite_totale = 0
-    #iteration pour chaque couche de la lune
+    reynolds = [0]
     while (rayon>pas):#la borne inferieur peut etre modifier pour eviter les erreurs de calcul numérique et approximation
         
         tour += 1
@@ -353,6 +474,8 @@ while (tour_global<nb_iteration_max and delta_rayon>pas):
         etat.append(etat_l(rayon,rayon_noyau,rayon_metallique,pression[-1],T[-1]))
         masse_vol.append(densite(rayon,rayon_noyau,rayon_metallique,etat[-1],pression[-1],T[-1],fraction_silicate_glace,masse_vol_silicate,masse_vol_metal))
         
+        reynolds.append( (masse_vol[-1]*g[-1]*(T[-1]-T[-2])*pas**3) / (ice_viscosity(T[-1]) * (lambda_(rayon,rayon_noyau,rayon_metallique,T[-1],etat[-1]) / (masse_vol[-1]*capa_ther(etat[-1]) ) ) ) )
+    
     #fin de la boucle d'iteration pour une iteration
     
     
@@ -389,4 +512,4 @@ print("le silicate devrait degager {} W/kg (soit une erreur de {}% sur la chaleu
 print("l'effet de marée devrait être de {} W/m^3 si on considere que les emmissions radiogéniques sont bonnes".format(((4*pi*chaleur_surface*rayon_lune**2)-emmission_condrite_totale)/(4/3*pi*rayon_lune**3)))
 print("l'ecart au moment d'inertie est de {}".format(I[0]-moment_inertie))
 print("L'interface glace silicate se fait à {0:.3f} du rayon de la lune".format((rayon_noyau/rayon_lune)))  
-affichage(tour,g,pression,chaleur,T,I,etat,masse_vol,rayon_lune)
+affichage(tour,g,pression,chaleur,T,I,etat,masse_vol,rayon_lune,reynolds)
