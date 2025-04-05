@@ -474,8 +474,10 @@ while (tour_global<nb_iteration_max and delta_rayon>pas):
         etat.append(etat_l(rayon,rayon_noyau,rayon_metallique,pression[-1],T[-1]))
         masse_vol.append(densite(rayon,rayon_noyau,rayon_metallique,etat[-1],pression[-1],T[-1],fraction_silicate_glace,masse_vol_silicate,masse_vol_metal))
         
-        reynolds.append( (masse_vol[-1]*g[-1]*(T[-1]-T[-2])*pas**3) / (ice_viscosity(T[-1]) * (lambda_(rayon,rayon_noyau,rayon_metallique,T[-1],etat[-1]) / (masse_vol[-1]*capa_ther(etat[-1]) ) ) ) )
-    
+        if (etat[-1]==etat[-2]):
+            reynolds.append((masse_vol[-1]*g[-1]*(T[-1]-T[-2])*pas**3) / (ice_viscosity(T[-1]) * (lambda_(rayon,rayon_noyau,rayon_metallique,T[-1],etat[-1]) / (masse_vol[-1]*capa_ther(etat[-1]) ) ) ) )
+        else:
+            reynolds.append(0)
     #fin de la boucle d'iteration pour une iteration
     
     
