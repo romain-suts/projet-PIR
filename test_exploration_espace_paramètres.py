@@ -15,7 +15,7 @@ plt.close('all')
 G = 6.674E-11  # SI
 
 ###############################################################################
-### PARAMETRES A INITIALISER ###
+### PARAMETRES OBSERVER ###
 
 # Rayon du corps (m) 
 rayon = 2612.3E3  
@@ -23,18 +23,14 @@ rayon = 2612.3E3
 # Masse du corps (kg) 
 masse = 1.4819E23
 
-# Rayon du noyau (m)
-rayon_n = 100E3
-
-# Fraction du rayon occupée par le noyau
-Rn_R = rayon_n / rayon
-
 # Densité moyenne du corps (kg/m³)
-densite_moy = masse / (4 * np.pi / 3 * rayon**3)  
+densite_moy = masse / (4/3 * np.pi * rayon**3)  
 print("La densité moyenne du corps est : ", densite_moy,"\n")
 
 # Facteur d'inertie du corps 
 inertie = 0.3549
+
+
 ###############################################################################
 # DEFINITION DES FONCTIONS 
 
@@ -97,16 +93,23 @@ def calcul_facteur_inertie() :
 # Densité du noyau (kg/m³)  
 densite_n = 0
 
-# Densité de la couche externe (kg/m³)
-densite_e = 0 
+# Rayon du noyau (m)
+rayon_n = 0
 
-nb_point = 10
+# Densité de la couche externe (kg/m³)
+densite_e = 1000
+
+
+nb_point = 2
 resultat = np.zeros((nb_point**2, 6))
 tour = 0 
 
-for densite_n in np.linspace(5000, 8000, nb_point) :
-    for densite_e in np.linspace(917 , 1500, nb_point) :
-      
+for densite_n in np.linspace(4000, 8000, nb_point) :
+    for rayon_n in np.linspace(0, 800E3, nb_point) :
+        
+        # Fraction du rayon occupée par le noyau
+        Rn_R = rayon_n / rayon
+        
         # Fraction du rayon du manteau sur le rayon total
         Rm_R = np.linspace(Rn_R, 1.0, 1001)
         Rm_R = np.delete(Rm_R, 0)
@@ -115,7 +118,7 @@ for densite_n in np.linspace(5000, 8000, nb_point) :
         densite_m_densite_moy = np.zeros(1000)
         alpha = np.zeros(1000)
 
-        for i, Rm in enumerate(Rm_R):
+        for i, Rm in enumerate(Rm_R) :
             
             numerateur = (1 - (densite_n / densite_moy) * Rn_R**3 - (densite_e / densite_moy) * (1 - Rm**3))
             denominateur = Rm**3 - Rn_R**3
@@ -143,17 +146,16 @@ for densite_n in np.linspace(5000, 8000, nb_point) :
         
         facteur_inertie = calcul_facteur_inertie()
         
+        resultat[tour, 2] = densite_m
+        resultat[tour, 3] = rayon_m / rayon
+        resultat[tour, 4] = ( masse_corps - masse) / masse  
+        resultat[tour, 5] = (facteur_inertie - inertie) / inertie
         
-        resultat[tour][2] = densite_m
-        resultat[tour][3] = rayon_m / rayon
-        resultat[tour][4] = ( masse_corps - masse) / masse  
-        resultat[tour][5] = (facteur_inertie - inertie) / inertie
+        resultat[tour, 0] = densite_n
         
-        resultat[tour][0] = densite_n
+        # if 2500 < densite_m < 4000 :
+        resultat[tour, 1] = rayon_n / rayon
         
-        if 2500 < densite_m < 4000 :
-            
-            resultat[tour][1] = densite_e
         tour += 1
 
 
