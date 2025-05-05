@@ -67,11 +67,6 @@ def chaleur_radiactive (SSage):
 
 
 	for i in range(0,6):
-		print( '{:<10}   {:<20.3e} {:<20.3e} {:<20.3e} {:<20.3e}'.format(nX[i], nXsXpd[i], Xpd[i], nXsXi[i], Xi[i]))
-
-	print( '')
-	print( '{:<10}{:^10}{:^30}{:^10}{:^30}{:^10}'.format(' nX','t_1/2', 'Qpd','Hpd', 'Qi','Hi'))
-	for i in range(0,6):
 		Qpd[i]=nXpd[i]*E[i]*MeV*Na/(m_mole[i]*1.e-3)
 		Hpd[i]=Qpd[i]/(tau[i]*nspy)
 		Qi[i]=nXi[i]*E[i]*MeV*Na/(m_mole[i]*1.e-3)
