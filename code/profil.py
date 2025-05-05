@@ -65,7 +65,7 @@ def chaleur_radiactive (SSage):
 	nXsXi[4:6] = nXi[4:6]/Xi[4:6]
 
 
-	print('{:<10}{:^20}{:^20}{:^20}{:^20}'.format(' nX', '[nX]/[X]pd','[X]pd', '[nX]/[X]i','[X]i'))
+
 	for i in range(0,6):
 		print( '{:<10}   {:<20.3e} {:<20.3e} {:<20.3e} {:<20.3e}'.format(nX[i], nXsXpd[i], Xpd[i], nXsXi[i], Xi[i]))
 
@@ -76,7 +76,6 @@ def chaleur_radiactive (SSage):
 		Hpd[i]=Qpd[i]/(tau[i]*nspy)
 		Qi[i]=nXi[i]*E[i]*MeV*Na/(m_mole[i]*1.e-3)
 		Hi[i]=Qi[i]/(tau[i]*nspy)
-		print( '{:<10}{:<20.3e}{:<20.3e}{:<20.3e}{:<20.3e}{:<20.3e}'.format(nX[i], t_demi[i], Qpd[i], Hpd[i], Qi[i], Hi[i]))
 
 	nt=300
 
@@ -95,7 +94,6 @@ def chaleur_radiactive (SSage):
 		H[i,:]=         Hi[i]*Xchond[i]*exp(-(time[:])/tau[i])
 		H[6,:]=H[6,:]+H[i,:]
 
-	print("\n Initial total heat production in CM chondrites    : {:.3e} W/kg".format(H[-1,0]))
 	print(" Present day total heat production in CM chondrites: {:.3e} W/kg\n".format(H[-1,-1]))
 
 	return (H[-1,-1])
@@ -251,7 +249,7 @@ def affichage(tour,g,pression,chaleur,T,I,etat,masse_vol,rayon,reynolds):#foncti
     plt.show()
     plt.grid()
     plt.plot(x,I)
-    plt.title("Moment d'inertie en fonction du rayon")
+    plt.title("Facteur d'inertie en fonction du rayon")
     plt.xlabel("Rayon(m)")
     plt.ylabel("moment d'inertie(kg.m²)")
     plt.show()
@@ -329,7 +327,7 @@ def etat_l(rayon,rayon_noyau,rayon_metallique,P,T):
     #si on est dans le manteau glacé on cherche le type de glace que l'on a 
     elif (rayon>rayon_noyau):
         
-        if (T<273.15 and (P<209.9*10**6)):#glace 1 (math. log(T)<math. log(273.15)+(delta_V_ice_I/chaleur_latente_I)*(P-P_atm))
+        if ((math. log(T)<math. log(273.15)+(delta_V_ice_I/chaleur_latente_I)*(P_atm-P)) and (P<209.9*10**6)):#glace 1 (math. log(T)<math. log(273.15)+(delta_V_ice_I/chaleur_latente_I)*(P-P_atm))
             return 1
         
         elif ((P*10**(-6)>209.5+101.1*((T/251.15)**(42.86)-1)) and (P<350.1*10**6) and (P>=209.9*10**6)):#glace 3
@@ -373,21 +371,21 @@ SSage=4.5673e9       #years
 #constante de masse
 masse_vol_glace_pur = 917. #kg/m^3
 masse_vol_glace = 1000. #kg/m^3
-masse_vol_silicate = 2800. #kg/m^3
-masse_vol_metal = 8000.
-masse_lune = 1.4819E23 #kg
+masse_vol_silicate = 3040. #kg/m^3
+masse_vol_metal = 9045.2
+masse_lune = 1.4819*10**23 #kg
 masse = 0. #kg
 
 #constante géometrique
-rayon_lune = 2631.2E3 #m
-rayon_metallique = 767900
+rayon_lune = 2631.2*10**3 #m
+rayon_metallique = 0.1734*rayon_lune
 
 #constante lie a la gravitation
 G = 6.6743E-11 #SI
 g_lune = masse_lune*G/np.power(rayon_lune,2) #ms^-2
 
 #constante mecanique
-moment_inertie = 0.3115 #I/MR^2 
+moment_inertie = 0.3115#I/MR^2 
 pression_surface = 0. #Pa
 
 #constante thermodynamique
@@ -473,7 +471,7 @@ while (tour_global<nb_iteration_max and delta_rayon>pas):
         #etablissement de l'etat de la couche
         etat.append(etat_l(rayon,rayon_noyau,rayon_metallique,pression[-1],T[-1]))
         masse_vol.append(densite(rayon,rayon_noyau,rayon_metallique,etat[-1],pression[-1],T[-1],fraction_silicate_glace,masse_vol_silicate,masse_vol_metal))
-        #manque de valeurs sur la viscosite ce qui entraine de grande erreurs interprétation surement impossible
+        #manque de valeurs sur la viscosite ce qui entraine de grande erreurs interprétation surement impossible en profondeur(endroit ou on a plus de galce ih)
         if (etat[-1]==etat[-2] and rayon>rayon_noyau):
             
             reynolds.append((masse_vol[-1]*g[-1]*(T[-1]-T[-2])*pas**3) / (ice_viscosity(T[-1]) * (lambda_(rayon,rayon_noyau,rayon_metallique,T[-1],etat[-1]) / (masse_vol[-1]*capa_ther(etat[-1]) ) ) ) )
@@ -510,7 +508,15 @@ for i in range(len(I)):
     rayon-=pas
     
 fichier.close()
-
+for i in range(len(etat)):
+    if (etat[i]>0):
+        etat[i]=3
+    if etat[i]==0:
+        etat[i]=2
+    if(etat[i]<=-3):
+        etat[i]=0
+    if(etat[i]==-1 or etat[i]==-2):
+        etat[i]=1
 #affichage des resultats
 print("ecart chaleur porduite interne par rapport a celle degager = {}W".format(f"{(chaleur_surface*4*pi*rayon_lune**2-(4/3)*pi*masse_vol_silicate*emmission_radiogénique*(rayon_noyau**3-rayon_metallique**3)):.2e}"))
 print("le silicate devrait degager {} W/kg (soit une erreur de {}% sur la chaleur dégagée) pour que il n'y ait que les silicates qui degages de la chaleur".format((chaleur_surface*4*pi*rayon_lune**2)/((4/3)*pi*masse_vol_silicate*(rayon_noyau**3-rayon_metallique**3)),100*(chaleur_surface*4*pi*rayon_lune**2-(4/3)*pi*masse_vol_silicate*emmission_radiogénique*(rayon_noyau**3-rayon_metallique**3))/(chaleur_surface*4*pi*rayon_lune**2)))
